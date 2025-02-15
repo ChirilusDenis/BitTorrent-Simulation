@@ -1,0 +1,58 @@
+    This aplication simulates the logic behind the operation of a bittorrent tracker,
+along with some clients. 
+
+    The communication between the parts of the system is based on an opening message, 
+which consists of a single integer. This integer informs the receptor of the action
+the sender is trying to execute. More data can be transmited after, depending on the
+wanted action.
+_____________________________________________________________________________________________
+TRACKER:
+
+    There is a single tracker in the system, which is the process with the rank equal to 0.
+    Once started, the tracker waits to receive data from each of the clients. The data
+is composed of all the files' hashed segments. With all the hashes, the tracker builds
+a database with all the files present in the network, along with a list of seeders, 
+users that already have the file.
+    After receiving data from all the clients, the tracker sends an integer to all
+clients, signaling they can start their work, the tracker continuing execution in a loop.
+
+    When the tracker receives an integer, based on the values received, it can do one
+of the following actions:
+    * if a client requests a file, the tracker receives the name of that file and 
+        sends back to the client all the hashes of that file
+    * if the client wants the swarm of a file, the tracker receives the name of that
+        file and sends back the seeders and peers associated to that file
+    * if the client signals it has finished downloading a file, the tracker deletes that
+        user from that file's peer list and adds it to the seeders list
+    * if a user signals it has finished all downloads, it increments clients-done counter
+    Once all clients have sent a signal that they finished downloading, the tracker sends
+a message to the clients to stop completely.
+_____________________________________________________________________________________________
+CLIENT:
+
+    The clients start by reading their files and sending all the hashed segments to the
+tracker. This initialization phase does not require integer signals synchronization beacause
+both the client and the tracker do it at the start of their execution, waiting for each
+other's response.
+    Once initialization is finished, the clients execution is split in 2 thread:
+
+    1. The download thread processes wanted files sequentially. It sends a message,
+requesting the hashes of said file. After also sending the name of the file, all the
+hashes are received. The client also requests the seeders and peers lists of that file,
+repeating every 10 downloaded segments.
+    In order to reduce the ammount of communication messages, seeders are prioritized in the
+downloading process. The only case in which a segments is requested from a peer is if it
+has less connections than any seeder. If said peer does not have the requested segment, the
+segment is requested from the seeder with the least ammount of connections, as it is
+guaranteed it has the requested segment.
+    The connections are mettered as the numbers of requests and a segment is identified as
+its position in the file.
+    After fully downloading each file, the client sends a signal to the tracker that he 
+finished downloading a file, along with the file name.
+    After finishing downloading all the files, the tracker is informed of it through a signal.
+
+    2. The upload thread awaits for requests in a loop. It can respond to 3 kinds of request:
+    * when another client requests the number of connections, it sends back said number
+    * when another client requests a segment, the thread looks if he has that segment
+            if affirmative, it sends back an ACK signal, or an NACK signal otherwise
+    * when the tracker requests that the thread stops, it exits the loop it operates in
