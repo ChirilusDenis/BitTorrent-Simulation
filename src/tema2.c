@@ -325,8 +325,6 @@ void peer(int numtasks, int rank) {
     void *status;
     int r;
 
-    // char filename[15] = "test1/inx.txt";
-    // filename[8] = rank + 48;
     char filename[15] = "inx.txt";
     filename[2] = rank + 48;
     
